@@ -323,6 +323,8 @@ D_loss_record = D_loss_real_record + D_loss_fake_record
 G_loss_record = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fake_logits, labels=tf.ones([batch_size, 1, 1, 1]))) 
 
 root = './Potentialflow-results/'
+if not os.path.isdir(root):
+    os.mkdir(root)
 
 # optimizer for each network 
 with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
