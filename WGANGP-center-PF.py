@@ -406,7 +406,11 @@ for epoch in range(train_epoch+1):
     train_hist['prediction'].append(prediction)
     plot_samples(X, Y, prediction)
     #plot_samples(X, Y, prediction, name)
-    
+z_pred = np.random.normal(0, 1, (1000, 1, 1, 100))
+y_label_pred = shuffled_label[0:1000].reshape([1000, 1, 1, n_label])
+prediction = G_z.eval({z:z_pred, y_label:y_label_pred, isTrain: False})
+prediction = prediction*(1.1*(nor_max-nor_min)/2)+(nor_max+nor_min)/2
+train_hist['prediction'].append(prediction)
 end_time = time.time()
 total_ptime = end_time - start_time
 
