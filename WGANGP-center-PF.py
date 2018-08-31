@@ -8,46 +8,50 @@ Created on Tue Aug 28 21:55:17 2018
 
 import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import os, time, random
+import math
 
 tf.reset_default_graph()
 
+# parameter need to be changed
 cons_value = 0
+lam_cons = 0
+train_epoch = 50
 
 # number of mesh
 n_mesh = 28
 
 
-def plot_samples(X, Y, U, name=None):
-    '''
-    plot the samples
-    '''
-    figu, axsu = plt.subplots(4, 4, figsize=(15, 6))
-    figv, axsv = plt.subplots(4, 4, figsize=(15, 6))
-    figu.subplots_adjust(hspace = .05, wspace=.01)
-    figv.subplots_adjust(hspace = .05, wspace=.01)
-    axsu = axsu.ravel()
-    axsv = axsv.ravel()
-    data_num = len(U)
-    num_plot = np.min([data_num, 16])
-    for i in range(num_plot):
-        sample = U[i]
-        axsu[i].contourf(X, Y, sample[:,:,0])
-        axsu[i].set_xticklabels([])
-        axsu[i].set_yticklabels([])
-        
-        axsv[i].contourf(X, Y, sample[:,:,1])
-        axsv[i].set_xticklabels([])
-        axsv[i].set_yticklabels([])
-    if name == None:
-        plt.show()
-    else:
-        nameu = name+'u.png'
-        namev = name+'v.png'
-        figu.savefig(nameu)
-        figv.savefig(namev)
-    plt.close()
+#def plot_samples(X, Y, U, name=None):
+#    '''
+#    plot the samples
+#    '''
+#    figu, axsu = plt.subplots(4, 4, figsize=(15, 6))
+#    figv, axsv = plt.subplots(4, 4, figsize=(15, 6))
+#    figu.subplots_adjust(hspace = .05, wspace=.01)
+#    figv.subplots_adjust(hspace = .05, wspace=.01)
+#    axsu = axsu.ravel()
+#    axsv = axsv.ravel()
+#    data_num = len(U)
+#    num_plot = np.min([data_num, 16])
+#    for i in range(num_plot):
+#        sample = U[i]
+#        axsu[i].contourf(X, Y, sample[:,:,0])
+#        axsu[i].set_xticklabels([])
+#        axsu[i].set_yticklabels([])
+#        
+#        axsv[i].contourf(X, Y, sample[:,:,1])
+#        axsv[i].set_xticklabels([])
+#        axsv[i].set_yticklabels([])
+#    if name == None:
+#        plt.show()
+#    else:
+#        nameu = name+'u.png'
+#        namev = name+'v.png'
+#        figu.savefig(nameu)
+#        figv.savefig(namev)
+#    plt.close()
 
 
 # generate samples
@@ -116,7 +120,7 @@ samples[:,1] = alpha_sample
 samples[:,2] = m_sample
 
 X, Y, U, ur = generate_sample(n=n_mesh, parameter=samples)
-plot_samples(X, Y, U)
+#plot_samples(X, Y, U)
 
 # normalization
 nor_max = np.max(U)
@@ -237,11 +241,11 @@ def constraints(x,dx,dy, filtertf):
     
     u_left = tf.slice(u, [0,0,0], [batch_size, n_mesh, n_mesh-1])
     u_right = tf.slice(u, [0,0,1], [batch_size, n_mesh, n_mesh-1])
-    d_u = tf.divide(tf.subtract(u_right,u_left), dx)
+    d_u = tf.divide(tf.subtract(u_right, u_left), dx)
     
     v_up = tf.slice(v, [0,0,0], [batch_size, n_mesh-1, n_mesh])
     v_down = tf.slice(v, [0,1,0], [batch_size, n_mesh-1, n_mesh])
-    d_v = tf.divide(tf.subtract(v_down,v_up), dy)
+    d_v = tf.divide(tf.subtract(v_down, v_up), dy)
     
     delta_u = tf.slice(d_u, [0,1,0],[batch_size, n_mesh-1, n_mesh-1])
     delta_v = tf.slice(d_v, [0,0,1],[batch_size, n_mesh-1, n_mesh-1])
@@ -258,13 +262,12 @@ def constraints(x,dx,dy, filtertf):
     delta_lose_ = tf.nn.relu(delta_lose_)
     return delta_lose_, divergence_mean
 
-lam_cons = 5
 
-# lr = 0.0002
-train_epoch = 30
+lr_setting = 0.00002
+
 
 global_step = tf.Variable(0, trainable=False)
-lr = tf.train.exponential_decay(0.0002, global_step, 500, 0.95, staircase=True)
+lr = tf.train.exponential_decay(lr_setting, global_step, 500, 0.95, staircase=True)
 
 # variables : input
 x = tf.placeholder(tf.float32, shape=(None, n_mesh, n_mesh, 2))
@@ -296,7 +299,7 @@ lam_GP = 10
 eps = tf.random_uniform([batch_size, 1], minval=0., maxval=1.)
 eps = tf.reshape(eps,[batch_size, 1, 1, 1])
 eps = eps * np.ones([batch_size, n_mesh, n_mesh, 2])
-X_inter = eps*x + (1.-eps)*G_z
+X_inter = eps*x + (1. -eps)*G_z
 grad = tf.gradients(discriminator(X_inter, y_fill, isTrain, reuse=tf.AUTO_REUSE), [X_inter])[0]
 grad_norm = tf.sqrt(tf.reduce_sum((grad)**2, axis=1))
 grad_pen = lam_GP * tf.reduce_mean((grad_norm - 1)**2)
@@ -308,7 +311,7 @@ D_loss_fake = tf.reduce_mean(D_fake_logits)
 D_loss = D_loss_real + D_loss_fake + grad_pen
 delta_loss = tf.reduce_mean(delta_lose)
 G_loss_only = -tf.reduce_mean(D_fake_logits)
-G_loss = G_loss_only #+ lam_cons*tf.log(delta_loss+1)
+G_loss = G_loss_only + lam_cons*tf.log(delta_loss+1)
 
 
 # record loss function for each network
@@ -342,6 +345,7 @@ train_hist['G_losses'] = []
 train_hist['delta_real'] = []
 train_hist['delta_lose'] = []
 train_hist['prediction'] = []
+train_hist['prediction_fit'] = []
 train_hist['ratio'] = []
 
 # save model and all variables
@@ -350,6 +354,7 @@ saver = tf.train.Saver()
 # training-loop
 np.random.seed(int(time.time()))
 print('training start!')
+print('Lr:'+str(lr_setting)+',lam:'+str(lam_cons))
 start_time = time.time()
 
 d_x_ = np.tile(d_x, (batch_size, 1)).reshape([batch_size, n_mesh, n_mesh-1])
@@ -388,6 +393,8 @@ for epoch in range(train_epoch+1):
         delta_lose_record.append(errdelta_lose)
 
     epoch_end_time = time.time()
+    if math.isnan(np.mean(G_losses)):
+        break
     per_epoch_ptime = epoch_end_time - epoch_start_time
     print('[%d/%d] - ptime: %.2f loss_d: %.3f, loss_g: %.3f, delta: %.3f' % 
           ((epoch + 1), train_epoch, per_epoch_ptime, np.mean(D_losses), np.mean(G_losses), np.mean(delta_real_record)))
@@ -396,7 +403,7 @@ for epoch in range(train_epoch+1):
     train_hist['delta_real'].append(np.mean(delta_real_record))
     train_hist['delta_lose'].append(np.mean(delta_lose_record))
     ### need change every time, PF: potential flow, 
-    name = root + 'PF-WGANGP-no-va'+str(epoch)
+    name = root + 'PF-WGANGP-lam-'+str(lam_cons)+'-cons'+'cons_value-'
     
     z_pred = np.random.normal(0, 1, (16, 1, 1, 100))
     y_label_pred = shuffled_label[0:16].reshape([16, 1, 1, n_label])
@@ -406,17 +413,18 @@ for epoch in range(train_epoch+1):
     #prediction = prediction*np.max(U)+np.max(U)/2
     prediction = prediction*(1.1*(nor_max-nor_min)/2)+(nor_max+nor_min)/2
     train_hist['prediction'].append(prediction)
-    plot_samples(X, Y, prediction)
+    #plot_samples(X, Y, prediction)
     #plot_samples(X, Y, prediction, name)
-z_pred = np.random.normal(0, 1, (1000, 1, 1, 100))
-y_label_pred = shuffled_label[0:1000].reshape([1000, 1, 1, n_label])
-prediction = G_z.eval({z:z_pred, y_label:y_label_pred, isTrain: False})
-prediction = prediction*(1.1*(nor_max-nor_min)/2)+(nor_max+nor_min)/2
-train_hist['prediction'].append(prediction)
+    if epoch % 10 == 0:
+        z_pred = np.random.normal(0, 1, (1000, 1, 1, 100))
+        y_label_pred = shuffled_label[0:1000].reshape([1000, 1, 1, n_label])
+        prediction = G_z.eval({z:z_pred, y_label:y_label_pred, isTrain: False})
+        prediction = prediction*(1.1*(nor_max-nor_min)/2)+(nor_max+nor_min)/2
+        train_hist['prediction_fit'].append(prediction)
+
 end_time = time.time()
 total_ptime = end_time - start_time
-
-name_data = root+'PF-WGANGP-no-va'
+name_data = root+name = root + 'PF-WGANGP-lam-'+str(lam_cons)+'-cons'+'cons_value'
 np.savez_compressed(name_data, a=train_hist, b=per_epoch_ptime)
 save_model = name_data+'.ckpt'
 save_path = saver.save(sess, save_model)
