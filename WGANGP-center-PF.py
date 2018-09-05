@@ -17,10 +17,15 @@ tf.reset_default_graph()
 # parameter need to be changed
 cons_value = 0
 lam_cons = 0
-train_epoch = 50
+train_epoch = 1
+lr_setting = 0.00002
+
+print('cons: %.1f lam: %.1f lr: %.5f ep: %.1f' %(cons_value, lam_cons, lr_setting, train_epoch))
 
 # number of mesh
 n_mesh = 28
+n_label = 3
+batch_size = 100
 
 
 #def plot_samples(X, Y, U, name=None):
@@ -107,7 +112,7 @@ def generate_sample(n, parameter):
 n_sam = 20000
 V_mu, V_sigma = 4, 0.4
 alpha_mu, alpha_sigma = 0, np.pi/20
-m_mu, m_sigma = 1, 0.2
+m_mu, m_sigma = 1, 0.1
 
 samples = np.zeros([n_sam, 3])
 
@@ -120,7 +125,6 @@ samples[:,1] = alpha_sample
 samples[:,2] = m_sample
 
 X, Y, U, ur = generate_sample(n=n_mesh, parameter=samples)
-#plot_samples(X, Y, U)
 
 # normalization
 nor_max = np.max(U)
@@ -129,8 +133,6 @@ print(nor_max)
 print(nor_min)
 train_set = (U-(np.max(U)+np.min(U))/2)/(1.1*(np.max(U)-np.min(U))/2)
 train_label = samples
-
-batch_size = 100
 
 # use to calculate divergence
 d_x = X[:,1:]-X[:,:-1]
@@ -145,7 +147,7 @@ filter_batch = np.tile(filter, (batch_size, 1)).reshape([batch_size, n_mesh-1, n
 
 #----------------------------------------------------------------------------#
 #GANs
-n_label = 3
+
 
 def next_batch(num, labels, U):
     '''
@@ -159,8 +161,6 @@ def next_batch(num, labels, U):
     label_shuffle = [labels[i] for i in idx]
 
     return np.asarray(U_shuffle), np.asarray(label_shuffle)
-
-# parameters of GANs
     
 # leak_relu
 def lrelu(X, leak=0.2):
@@ -206,8 +206,7 @@ def discriminator(x, y_fill, isTrain=True, reuse=False):
         w_init = tf.truncated_normal_initializer(mean=0.0, stddev=0.02)
         b_init = tf.constant_initializer(0.0)
 
-        # concat layer
-         
+        # concat layer       
         cat1 = tf.concat([x, y_fill], 3)
 
         # 1st hidden layer
@@ -251,6 +250,7 @@ def constraints(x,dx,dy, filtertf):
     delta_v = tf.slice(d_v, [0,0,1],[batch_size, n_mesh-1, n_mesh-1])
     
     divergence_field = delta_u+delta_v
+    #filter divergence
     divergence_filter = tf.multiply(divergence_field, filtertf)
     divergence_square = tf.square(divergence_filter)
     delta = tf.reduce_mean(divergence_square,2)
@@ -261,10 +261,6 @@ def constraints(x,dx,dy, filtertf):
     delta_lose_ = divergence_mean - kesi
     delta_lose_ = tf.nn.relu(delta_lose_)
     return delta_lose_, divergence_mean
-
-
-lr_setting = 0.00002
-
 
 global_step = tf.Variable(0, trainable=False)
 lr = tf.train.exponential_decay(lr_setting, global_step, 500, 0.95, staircase=True)
@@ -303,7 +299,6 @@ X_inter = eps*x + (1. -eps)*G_z
 grad = tf.gradients(discriminator(X_inter, y_fill, isTrain, reuse=tf.AUTO_REUSE), [X_inter])[0]
 grad_norm = tf.sqrt(tf.reduce_sum((grad)**2, axis=1))
 grad_pen = lam_GP * tf.reduce_mean((grad_norm - 1)**2)
-
 
 # loss for each network
 D_loss_real = -tf.reduce_mean(D_real_logits)
@@ -403,28 +398,27 @@ for epoch in range(train_epoch+1):
     train_hist['delta_real'].append(np.mean(delta_real_record))
     train_hist['delta_lose'].append(np.mean(delta_lose_record))
     ### need change every time, PF: potential flow, 
-    name = root + 'PF-WGANGP-lam-'+str(lam_cons)+'-cons'+'cons_value-'
+    #root + 'PF-WGANGP-cons'+str(cons_value)+'-lam'+str(lam_cons)+'-lr'+str(lr_setting)+'-ep'+str(train_epoch)
     
     z_pred = np.random.normal(0, 1, (16, 1, 1, 100))
     y_label_pred = shuffled_label[0:16].reshape([16, 1, 1, n_label])
-    #summary = sess.run([merged_summary_op],
-                       #feed_dict={x: x_, z: z_, y_fill: y_fill_, y_label: y_label_, dx:d_x_, dy:d_y_, isTrain: False})
     prediction = G_z.eval({z:z_pred, y_label:y_label_pred, isTrain: False})
     #prediction = prediction*np.max(U)+np.max(U)/2
     prediction = prediction*(1.1*(nor_max-nor_min)/2)+(nor_max+nor_min)/2
     train_hist['prediction'].append(prediction)
     #plot_samples(X, Y, prediction)
     #plot_samples(X, Y, prediction, name)
-    if epoch % 10 == 0:
-        z_pred = np.random.normal(0, 1, (1000, 1, 1, 100))
-        y_label_pred = shuffled_label[0:1000].reshape([1000, 1, 1, n_label])
+    if epoch % 30 == 0:
+        np.random.seed(1)
+        z_pred = np.random.normal(0, 1, (2000, 1, 1, 100))
+        y_label_pred = shuffled_label[0:2000].reshape([2000, 1, 1, n_label])
         prediction = G_z.eval({z:z_pred, y_label:y_label_pred, isTrain: False})
         prediction = prediction*(1.1*(nor_max-nor_min)/2)+(nor_max+nor_min)/2
         train_hist['prediction_fit'].append(prediction)
 
 end_time = time.time()
 total_ptime = end_time - start_time
-name_data = root+name = root + 'PF-WGANGP-lam-'+str(lam_cons)+'-cons'+'cons_value'
+name_data = root + 'PF-WGANGP-cons'+str(cons_value)+'-lam'+str(lam_cons)+'-lr'+str(lr_setting)+'-ep'+str(train_epoch)
 np.savez_compressed(name_data, a=train_hist, b=per_epoch_ptime)
 save_model = name_data+'.ckpt'
 save_path = saver.save(sess, save_model)
