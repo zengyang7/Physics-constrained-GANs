@@ -25,11 +25,11 @@ np.random.seed(1)
 
 # parameter need to be changed
 cons_value = 0
-lam_cons = 0
-train_epoch = 10
+lam_cons = 0.2
+train_epoch = 120
 lr_setting = 0.0005
 
-print('cons: %.1f lam: %.1f lr: %.5f ep: %.1f' %(cons_value, lam_cons, lr_setting, train_epoch))
+print('cons: %.1f lam: %.1f lr: %.6f ep: %.1f' %(cons_value, lam_cons, lr_setting, train_epoch))
 
 # number of mesh
 n_mesh = 32
@@ -89,7 +89,7 @@ def generate_sample(n, parameter):
         U.append(U_data)
     return X, Y, np.asarray(U)
 
-n_sam = 200
+n_sam = 20000
 V_mu, V_sigma = 4, 0.8
 alpha_mu, alpha_sigma = 0, np.pi/4
 m_mu, m_sigma = 1, 0.2
@@ -129,7 +129,7 @@ d_y_ = np.tile(d_y, (batch_size, 1)).reshape([batch_size, n_mesh-1, n_mesh])
 
 # use to filter divergence
 filter = np.ones((n_mesh-1, n_mesh-1))
-filter[15:18,15:18] = 0
+filter[13:18,13:18] = 0
 filter_batch = np.tile(filter, (batch_size, 1)).reshape([batch_size, n_mesh-1, n_mesh-1])
 
 #----------------------------------------------------------------------------#
@@ -168,16 +168,16 @@ def generator(z, isTrain=True, reuse=False):
         # 1st hidden layer
         # output.shape = (kernal.shape-1)*stride+input.shape
         # deconv1.shape = [batch_size, output.shape, **, channel]
-        deconv1 = tf.layers.conv2d_transpose(z, 512, [4, 4], strides=(1, 1), padding='valid', 
+        deconv1 = tf.layers.conv2d_transpose(z, 256, [4, 4], strides=(1, 1), padding='valid', 
                                              kernel_initializer=w_init, bias_initializer=b_init)
         lrelu1 = lrelu(tf.layers.batch_normalization(deconv1, training=isTrain), 0.2)
         # 2nd hidden layer
-        deconv2 = tf.layers.conv2d_transpose(lrelu1, 256, [5, 5], strides=(2, 2), padding='same', 
+        deconv2 = tf.layers.conv2d_transpose(lrelu1, 128, [5, 5], strides=(2, 2), padding='same', 
                                              kernel_initializer=w_init, bias_initializer=b_init)
         lrelu2 = lrelu(tf.layers.batch_normalization(deconv2, training=isTrain), 0.2)
         
         # 3rd layer
-        deconv3 = tf.layers.conv2d_transpose(lrelu2, 128, [5, 5], strides=(2, 2), padding='same', 
+        deconv3 = tf.layers.conv2d_transpose(lrelu2, 64, [5, 5], strides=(2, 2), padding='same', 
                                              kernel_initializer=w_init, bias_initializer=b_init)
         lrelu3 = lrelu(tf.layers.batch_normalization(deconv3, training=isTrain), 0.2)
         
@@ -197,15 +197,15 @@ def discriminator(x, isTrain=True, reuse=False):
         # concat layer       
         #cat1 = tf.concat([x, y_fill], 3)
         # 1st hidden layer
-        conv1 = tf.layers.conv2d(x, 128, [5, 5], strides=(2, 2), padding='same', kernel_initializer=w_init, bias_initializer=b_init)
+        conv1 = tf.layers.conv2d(x, 64, [5, 5], strides=(2, 2), padding='same', kernel_initializer=w_init, bias_initializer=b_init)
         lrelu1 = lrelu(tf.layers.batch_normalization(conv1, training=isTrain), 0.2)
 
         # 2nd hidden layer
-        conv2 = tf.layers.conv2d(lrelu1, 256, [5, 5], strides=(2, 2), padding='same', kernel_initializer=w_init, bias_initializer=b_init)
+        conv2 = tf.layers.conv2d(lrelu1, 128, [5, 5], strides=(2, 2), padding='same', kernel_initializer=w_init, bias_initializer=b_init)
         lrelu2 = lrelu(tf.layers.batch_normalization(conv2, training=isTrain), 0.2)
         
         # 3nd hidden layer
-        conv3 = tf.layers.conv2d(lrelu2, 512, [5, 5], strides=(2, 2), padding='same', kernel_initializer=w_init, bias_initializer=b_init)
+        conv3 = tf.layers.conv2d(lrelu2, 256, [5, 5], strides=(2, 2), padding='same', kernel_initializer=w_init, bias_initializer=b_init)
         lrelu3 = lrelu(tf.layers.batch_normalization(conv3, training=isTrain), 0.2)
 
         # output layer
@@ -374,7 +374,6 @@ for epoch in range(train_epoch+1):
     #root + 'PF-WGANGP-cons'+str(cons_value)+'-lam'+str(lam_cons)+'-lr'+str(lr_setting)+'-ep'+str(train_epoch)
     
     z_pred = np.random.normal(0, 1, (16, 1, 1, 100))
-    y_label_pred = shuffled_label[0:16].reshape([16, 1, 1, n_label])
     prediction = G_z.eval({z:z_pred, isTrain: False})
     #prediction = prediction*np.max(U)+np.max(U)/2
     prediction[:,:,:,0:2] = prediction[:,:,:,0:2]*(1.1*(nor_max_v-nor_min_v)/2)+(nor_max_v+nor_min_v)/2
@@ -392,7 +391,7 @@ for epoch in range(train_epoch+1):
 
 end_time = time.time()
 total_ptime = end_time - start_time
-name_data = root + 'PF-oWGANGP-cons'+str(cons_value)+'-lam'+str(lam_cons)+'-lr'+str(lr_setting)+'-ep'+str(train_epoch)
+name_data = root + 'PF-32-cons'+str(cons_value)+'-lam'+str(lam_cons)+'-lr'+str(lr_setting)+'-ep'+str(train_epoch)
 np.savez_compressed(name_data, a=train_hist, b=per_epoch_ptime)
 save_model = name_data+'.ckpt'
 save_path = saver.save(sess, save_model)
