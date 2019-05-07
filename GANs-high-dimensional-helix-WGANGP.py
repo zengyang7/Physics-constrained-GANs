@@ -225,8 +225,8 @@ G_solver = (tf.train.AdamOptimizer(learning_rate=1e-4).minimize(G_loss, var_list
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
-epoch = 20
-num_sam = 5000
+epoch = 200
+num_sam = 50000
 helix, label = generate_samples_3D(num_sam)
 helix_s, M = transfer3D_to_nD(helix, n, V, theta)
 print(len(helix_s))
