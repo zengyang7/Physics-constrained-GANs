@@ -290,6 +290,7 @@ helix, label = generate_samples(num_samp=num_sam, num_point=num_point)
 record_epoch = []
 record_loss_D = []
 record_loss_G = []
+record_delta = []
 record_deviation = []
 record_bias = []
 
@@ -304,16 +305,17 @@ with tf.Session() as sess:
             con_sample = label[iter*mb_size:(iter+1)*mb_size]
             noise_sample = sample_Z(mb_size, Noise_dim)
             _, D_loss_curr = sess.run([D_solver, D_loss], feed_dict={target: output_sample, Noise: noise_sample, con_v:con_sample})
-            _, G_loss_curr = sess.run([G_solver, G_loss], feed_dict={target: output_sample, Noise: noise_sample, con_v:con_sample})
+            _, G_loss_curr, delta_curr = sess.run([G_solver, G_loss, delta], feed_dict={target: output_sample, Noise: noise_sample, con_v:con_sample})
                    
         if it % (epoch/20) == 0:
-            #print('Iter: {}'.format(it))
-            #print('D loss: {:.4}'.format(D_loss_curr))
-            #print('G_loss: {:.4}'.format(G_loss_curr))
-            #print()
+            print('Iter: {}'.format(it))
+            print('D loss: {:.4}'.format(D_loss_curr))
+            print('G_loss: {:.4}'.format(G_loss_curr))
+            print('Constraints: {:.4}'.format(G_loss_curr))
             record_epoch.append(it)
             record_loss_D.append(D_loss_curr)
             record_loss_G.append(G_loss_curr)
+            record_delta.append(delta_curr)
             
             # prediction
             target_pred = sess.run(G_sample, feed_dict={Noise: noise_pred, con_v: con_pred})
