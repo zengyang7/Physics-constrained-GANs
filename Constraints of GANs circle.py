@@ -264,7 +264,7 @@ D_fake = discriminator(G_sample, con_v)
 lam = 10
 eps = tf.random_uniform([mb_size, 1], minval=0., maxval=1.)
 X_inter = eps*target + (1.-eps)*G_sample
-grad = tf.gradients(discriminator(X_inter), [X_inter])[0]
+grad = tf.gradients(discriminator(X_inter, con_v), [X_inter])[0]
 grad_norm = tf.sqrt(tf.reduce_sum((grad)**2, axis=1))
 grad_pen = lam * tf.reduce_mean((grad_norm - 1)**2)
 
