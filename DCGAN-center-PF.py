@@ -19,14 +19,17 @@ root = './Potentialflow-results/'
 if not os.path.isdir(root):
     os.mkdir(root)
 
-cons_value = 0.5
-lam = 15
-lr_setting = 0.0002
-train_epoch = 1
+cons_value = 0
+lam = 4
+lr_setting = 0.00002
+train_epoch = 0
 
 
 batch_size = 100
 n_label = 3
+
+print('DCGAN')
+print('cons: %.1f lam: %.1f lr: %.5f ep: %.1f' %(cons_value, lam, lr_setting, train_epoch))
 
 tf.reset_default_graph()
 
@@ -170,7 +173,7 @@ def lrelu(X, leak=0.2):
     return f1*X+f2*tf.abs(X)
 
 # G(z)
-def generator(z, y_label, isTrain=True, reuse=False):
+def generator(z, isTrain=True, reuse=False):
     with tf.variable_scope('generator', reuse=reuse):
         # initializer
         w_init = tf.truncated_normal_initializer(mean=0.0, stddev=0.02)
@@ -179,12 +182,12 @@ def generator(z, y_label, isTrain=True, reuse=False):
         # concat layer
         # z_ = np.random.normal(0, 1, (batch_size, 1, 1, 30)),
         # y_label.shape = [batch_size, 1, 1, 3]
-        cat1 = tf.concat([z, y_label], 3)
+        #cat1 = tf.concat([z, y_label], 3)
 
         # 1st hidden layer
         # output.shape = (kernal.shape-1)*stride+input.shape
         # deconv1.shape = [batch_size, output.shape, **, channel]
-        deconv1 = tf.layers.conv2d_transpose(cat1, 256, [7, 7], strides=(1, 1), padding='valid', 
+        deconv1 = tf.layers.conv2d_transpose(z, 256, [7, 7], strides=(1, 1), padding='valid', 
                                              kernel_initializer=w_init, bias_initializer=b_init)
         lrelu1 = lrelu(tf.layers.batch_normalization(deconv1, training=isTrain), 0.2)
 
@@ -201,15 +204,15 @@ def generator(z, y_label, isTrain=True, reuse=False):
         return o
 
 # D(x)
-def discriminator(x, y_fill, isTrain=True, reuse=False):
+def discriminator(x, isTrain=True, reuse=False):
     with tf.variable_scope('discriminator', reuse=reuse):
         # initializer
         w_init = tf.truncated_normal_initializer(mean=0.0, stddev=0.02)
         b_init = tf.constant_initializer(0.0)
 
         # concat layer
-         
-        cat1 = tf.concat([x, y_fill], 3)
+        #cat1 = tf.concat([x, y_fill], 3)
+        cat1 = x
 
         # 1st hidden layer
         conv1 = tf.layers.conv2d(cat1, 128, [5, 5], strides=(2, 2), padding='same', kernel_initializer=w_init, bias_initializer=b_init)
@@ -251,6 +254,7 @@ def constraints(x,dx,dy,filtertf):
     delta_v = tf.slice(d_v, [0,0,1],[batch_size, n_mesh-1, n_mesh-1])
     
     divergence = delta_u+delta_v
+    # filter the divergence
     divergence_filter = tf.multiply(divergence,filtertf)
     delta = tf.square(divergence_filter)
     
@@ -267,8 +271,6 @@ lr = tf.train.exponential_decay(lr_setting, global_step, 500, 0.95, staircase=Tr
 # variables : input
 x = tf.placeholder(tf.float32, shape=(None, n_mesh, n_mesh, 2))
 z = tf.placeholder(tf.float32, shape=(None, 1, 1, 100))
-y_label = tf.placeholder(tf.float32, shape=(None, 1, 1, n_label))
-y_fill = tf.placeholder(tf.float32, shape=(None, n_mesh, n_mesh, n_label))
 isTrain = tf.placeholder(dtype=tf.bool)
 
 # variables : input for constraints
@@ -277,11 +279,11 @@ dy = tf.placeholder(tf.float32, shape=(None, n_mesh-1, n_mesh))
 filtertf = tf.placeholder(tf.float32, shape=(None, n_mesh-1, n_mesh-1))
 
 # networks : generator
-G_z = generator(z, y_label, isTrain)
+G_z = generator(z, isTrain)
 
 # networks : discriminator
-D_real, D_real_logits = discriminator(x, y_fill, isTrain)
-D_fake, D_fake_logits = discriminator(G_z, y_fill, isTrain, reuse=tf.AUTO_REUSE)
+D_real, D_real_logits = discriminator(x, isTrain)
+D_fake, D_fake_logits = discriminator(G_z, isTrain, reuse=tf.AUTO_REUSE)
 delta_lose, delta_real = constraints(G_z, dx, dy, filtertf)
 
 # loss for each network
@@ -290,7 +292,7 @@ D_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fa
 D_loss = D_loss_real + D_loss_fake
 delta_loss = tf.reduce_mean(delta_lose)
 G_loss_only = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_fake_logits, labels=tf.ones([batch_size, 1, 1, 1]))) 
-G_loss = G_loss_only #+ lam*tf.log(delta_loss+1)#+ lam * delta_loss #
+G_loss = G_loss_only + lam*tf.log(delta_loss+1)#+ lam * delta_loss #
 
 
 # trainable variables for each network
@@ -347,23 +349,21 @@ for epoch in range(train_epoch+1):
     for iter in range(shuffled_set.shape[0] // batch_size):
         # update discriminator
         x_ = shuffled_set[iter*batch_size:(iter+1)*batch_size]
-        y_label_ = shuffled_label[iter*batch_size:(iter+1)*batch_size].reshape([batch_size, 1, 1, 3])
-        y_fill_ = y_label_ * np.ones([batch_size, n_mesh, n_mesh, 3])
         z_ = np.random.normal(0, 1, (batch_size, 1, 1, 100))
         
-        loss_d_, _ = sess.run([D_loss, D_optim], {x: x_, z: z_, y_fill: y_fill_, y_label: y_label_, isTrain: True})
+        loss_d_, _ = sess.run([D_loss, D_optim], {x: x_, z: z_, isTrain: True})
         
         # update generator
         z_ = np.random.normal(0, 1, (batch_size, 1, 1, 100))
 
-        loss_g_, _ = sess.run([G_loss, G_optim], {z: z_, x: x_, y_fill: y_fill_, y_label: y_label_, dx:d_x_, dy:d_y_,filtertf:filter_batch, isTrain: True})
+        loss_g_, _ = sess.run([G_loss, G_optim], {z: z_, x: x_, dx:d_x_, dy:d_y_,filtertf:filter_batch, isTrain: True})
 
-        errD_fake = D_loss_fake.eval({z: z_, y_label: y_label_, y_fill: y_fill_,filtertf:filter_batch, isTrain: False})
-        errD_real = D_loss_real.eval({x: x_, y_label: y_label_, y_fill: y_fill_,filtertf:filter_batch, isTrain: False})
-        errG = G_loss.eval({z: z_, y_label: y_label_, y_fill: y_fill_, dx:d_x_, dy:d_y_,filtertf:filter_batch, isTrain: False})
-        errG_only = G_loss_only.eval({z: z_, y_label: y_label_, y_fill: y_fill_, dx:d_x_, dy:d_y_,filtertf:filter_batch, isTrain: False})
-        errdelta_real = delta_real.eval({z: z_, y_label: y_label_, y_fill: y_fill_, dx:d_x_, dy:d_y_,filtertf:filter_batch, isTrain: False})
-        errdelta_lose = delta_lose.eval({z: z_, y_label: y_label_, y_fill: y_fill_, dx:d_x_, dy:d_y_,filtertf:filter_batch, isTrain: False})
+        errD_fake = D_loss_fake.eval({z:z_, filtertf:filter_batch, isTrain: False})
+        errD_real = D_loss_real.eval({x:x_, filtertf:filter_batch, isTrain: False})
+        errG = G_loss.eval({z:z_, dx:d_x_, dy:d_y_, filtertf:filter_batch, isTrain: False})
+        errG_only = G_loss_only.eval({z: z_, dx:d_x_, dy:d_y_, filtertf:filter_batch, isTrain: False})
+        errdelta_real = delta_real.eval({z:z_, dx:d_x_, dy:d_y_, filtertf:filter_batch, isTrain: False})
+        errdelta_lose = delta_lose.eval({z:z_, dx:d_x_, dy:d_y_, filtertf:filter_batch, isTrain: False})
         
         D_losses.append(errD_fake + errD_real)
         G_losses.append(errG)
@@ -383,16 +383,14 @@ for epoch in range(train_epoch+1):
     ### need change every time, PF: potential flow, 
     #name = root + 'PF-DCGAN-cons'+str(cons_value)+'-lam'+str(lam)+'-ep'+str(epoch)
     z_pred = np.random.normal(0, 1, (16, 1, 1, 100))
-    y_label_pred = shuffled_label[0:16].reshape([16, 1, 1, 3])
-    prediction = G_z.eval({z:z_pred, y_label:y_label_pred, isTrain: False})
+    prediction = G_z.eval({z:z_pred, isTrain: False})
     #prediction = prediction*np.max(U)+np.max(U)/2
     prediction = prediction*(1.1*(nor_max-nor_min)/2)+(nor_max+nor_min)/2
     train_hist['prediction'].append(prediction)
     #plot_samples(X, Y, prediction, name)
     if epoch % 10 == 0:
         z_pred = np.random.normal(0, 1, (1000, 1, 1, 100))
-        y_label_pred = shuffled_label[0:1000].reshape([1000, 1, 1, n_label])
-        prediction = G_z.eval({z:z_pred, y_label:y_label_pred, isTrain: False})
+        prediction = G_z.eval({z:z_pred, isTrain: False})
         prediction = prediction*(1.1*(nor_max-nor_min)/2)+(nor_max+nor_min)/2
         train_hist['prediction_fit'].append(prediction)
 
@@ -404,7 +402,7 @@ end_time = time.time()
 total_ptime = end_time - start_time
 train_hist['total_ptime'].append(total_ptime)
 
-name_data = root+'PF-DCGAN-cons'+str(cons_value)+'-lam'+str(lam)+'-ep'+str(epoch)
+name_data = root+'PF-DCGAN-cons'+str(cons_value)+'-lam'+str(lam)+'-lr'+str(lr_setting)+'-ep'+str(epoch)
 np.savez_compressed(name_data, a=train_hist, b=per_epoch_ptime)
 save_model = name_data+'.ckpt'
 save_path = saver.save(sess, save_model)

@@ -67,7 +67,6 @@ def generate_sample(n, parameter):
         U_data = np.zeros([n, n, 2])
         U_data[:, :, 0] = u
         U_data[:, :, 1] = v
-        print(U_data.dtype)
         U.append(U_data)
     return X, Y, np.asarray(U), ur
 
@@ -90,6 +89,7 @@ def plot_samples(X, Y, U, name=None):
         axsu[i].set_yticklabels([])
         
         axsv[i].contourf(X, Y, sample[:,:,1])
+
         axsv[i].set_xticklabels([])
         axsv[i].set_yticklabels([])
     if name == None:
@@ -102,7 +102,7 @@ def plot_samples(X, Y, U, name=None):
     plt.close()
 
 # setting for training sample
-n_sam = 20000
+n_sam = 2000
 V_mu, V_sigma = 0.5, 0.1
 alpha_mu, alpha_sigma = np.pi/4, np.pi/20
 m_mu, m_sigma = 1, 0.2
@@ -247,7 +247,7 @@ img_size = n_mesh
 #onehot = np.eye(3)
 
 # lr = 0.0002
-train_epoch = 30
+train_epoch = 2
 
 global_step = tf.Variable(0, trainable=False)
 lr = tf.train.exponential_decay(0.0002, global_step, 500, 0.95, staircase=True)

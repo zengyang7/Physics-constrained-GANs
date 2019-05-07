@@ -130,6 +130,7 @@ d_y_ = np.tile(d_y, (batch_size, 1)).reshape([batch_size, n_mesh-1, n_mesh])
 
 # use to filter divergence
 filter = np.ones((n_mesh-1, n_mesh-1))
+# set the value of the center as 0
 filter[15:18,15:18] = 0
 filter_batch = np.tile(filter, (batch_size, 1)).reshape([batch_size, n_mesh-1, n_mesh-1])
 
