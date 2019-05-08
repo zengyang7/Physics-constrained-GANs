@@ -15,8 +15,8 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-#from matplotlib.patches import Circle, Wedge, Polygon
-#from matplotlib.collections import PatchCollection
+from matplotlib.patches import Circle, Wedge, Polygon
+from matplotlib.collections import PatchCollection
 
 from scipy.optimize import curve_fit
 
@@ -43,10 +43,10 @@ n = 2
 epoch = 200
 
 # constraint epsilon = cons_value^2
-cons_value = 0
+cons_value = 0.2
 
 # weight of penalty term 
-lam_constraint = 0
+lam_constraint = 2
 
 
 # the function for fit
@@ -72,87 +72,87 @@ def next_batch(num, helix, label):
 
     return np.asarray(helix_shuffle), np.asarray(label_shuffle)
 
-#def plot_(data, n, num_point):
-#    '''
-#    Plot the n*(n-1) projection of n-dimensional data
-#    4*4 plots are presented
-#    '''
-#    for i in range(n-1):
-#        for j in range(i+1, n):
-#            print('figure x',i+1,'and x',j+1)
-#            gs = gridspec.GridSpec(4, 4)
-#            gs.update(wspace=0.05, hspace=0.05)
-#            for k, sample in enumerate(data):
-#                ax = plt.subplot(gs[k])
-#                plt.axis('off')
-#                ax.set_xticklabels([])
-#                ax.set_yticklabels([])
-#                ax.set_aspect('equal')
-#                a = np.reshape(sample, (n, num_point))
-#                ax.plot(a[i], a[j], marker="o", markersize=1)
-#                ax.set_xlim(-1.05, 1.05)
-#                ax.set_ylim(-1.05, 1.05)
-#            plt.show()
-#    
-#    
-#def plot_cGANs(data, n, real, num_point=80, name=None):
-#    '''
-#    Plot the results of cGAN
-#    '''
-#    for i in range(n-1):
-#        for j in range(i+1, n):
-#            print('figure x',i+1,'and x',j+1)
-#            gs = gridspec.GridSpec(2, 2)
-#            gs.update(wspace=0.07, hspace=0.1)
-#            for k, sample in enumerate(data):
-#                if k > 3:
-#                    break
-#                ax = plt.subplot(gs[k])
-#                plt.axis('off')
-#                ax.set_xticklabels([])
-#                ax.set_yticklabels([])
-#                ax.set_aspect('equal')
-#                a = np.reshape(sample, (n, num_point))
-#                b = np.reshape(real[k], (n, num_point))
-#                ax.plot(a[i], a[j], "o", markersize=2)
-#                ax.plot(b[i], b[j], "o", markersize=2)
-#                ax.set_xlim(-1.05, 1.05)
-#                ax.set_ylim(-1.05, 1.05)
-#            if name != None:
-#                namesave = name+'.pdf'
-#                plt.savefig(namesave)
-#            plt.show()
-#            
-#def plot_cGANs_ring(data, n, real_data, r, name=None):
-#    '''
-#    Plot the results of cGAN
-#    '''
-#    for i in range(n-1):
-#        for j in range(i+1, n):
-#            print('figure x',i+1,'and x',j+1)
-#            gs = gridspec.GridSpec(2, 2)
-#            gs.update(wspace=0.03, hspace=0.1)
-#            for k, sample in enumerate(data):
-#                if k > 3:
-#                    break
-#                ax = plt.subplot(gs[k])
-#                plt.axis('off')
-#                ax.set_xticklabels([])
-#                ax.set_yticklabels([])
-#                ax.set_aspect('equal')
-#                a = np.reshape(sample, (n, num_point))
-#                b = np.reshape(real_data[k], (n, num_point))
-#                ax.plot(a[i], a[j], "o", markersize=2)
-#                ax.plot(b[i], b[j], "o", markersize=2)
-#                patches = [Wedge((.0, .0), r[k]+cons_value, 0, 360, width=2*cons_value)]
-#                p = PatchCollection(patches, alpha=0.3, color='g')
-#                ax.add_collection(p)
-#                ax.set_xlim(-1.05, 1.05)
-#                ax.set_ylim(-1.05, 1.05)
-#            if name != None:
-#                namesave = name+'.pdf'
-#                plt.savefig(namesave)
-#            plt.show()
+def plot_(data, n, num_point):
+    '''
+    Plot the n*(n-1) projection of n-dimensional data
+    4*4 plots are presented
+    '''
+    for i in range(n-1):
+        for j in range(i+1, n):
+            print('figure x',i+1,'and x',j+1)
+            gs = gridspec.GridSpec(4, 4)
+            gs.update(wspace=0.05, hspace=0.05)
+            for k, sample in enumerate(data):
+                ax = plt.subplot(gs[k])
+                plt.axis('off')
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])
+                ax.set_aspect('equal')
+                a = np.reshape(sample, (n, num_point))
+                ax.plot(a[i], a[j], marker="o", markersize=1)
+                ax.set_xlim(-1.05, 1.05)
+                ax.set_ylim(-1.05, 1.05)
+            plt.show()
+    
+    
+def plot_cGANs(data, n, real, num_point=80, name=None):
+    '''
+    Plot the results of cGAN
+    '''
+    for i in range(n-1):
+        for j in range(i+1, n):
+            print('figure x',i+1,'and x',j+1)
+            gs = gridspec.GridSpec(2, 2)
+            gs.update(wspace=0.07, hspace=0.1)
+            for k, sample in enumerate(data):
+                if k > 3:
+                    break
+                ax = plt.subplot(gs[k])
+                plt.axis('off')
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])
+                ax.set_aspect('equal')
+                a = np.reshape(sample, (n, num_point))
+                b = np.reshape(real[k], (n, num_point))
+                ax.plot(a[i], a[j], "o", markersize=2)
+                ax.plot(b[i], b[j], "o", markersize=2)
+                ax.set_xlim(-1.05, 1.05)
+                ax.set_ylim(-1.05, 1.05)
+            if name != None:
+                namesave = name+'.pdf'
+                plt.savefig(namesave)
+            plt.show()
+            
+def plot_cGANs_ring(data, n, real_data, r, name=None):
+    '''
+    Plot the results of cGAN
+    '''
+    for i in range(n-1):
+        for j in range(i+1, n):
+            print('figure x',i+1,'and x',j+1)
+            gs = gridspec.GridSpec(2, 2)
+            gs.update(wspace=0.03, hspace=0.1)
+            for k, sample in enumerate(data):
+                if k > 3:
+                    break
+                ax = plt.subplot(gs[k])
+                plt.axis('off')
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])
+                ax.set_aspect('equal')
+                a = np.reshape(sample, (n, num_point))
+                b = np.reshape(real_data[k], (n, num_point))
+                ax.plot(a[i], a[j], "o", markersize=2)
+                ax.plot(b[i], b[j], "o", markersize=2)
+                patches = [Wedge((.0, .0), r[k]+cons_value, 0, 360, width=2*cons_value)]
+                p = PatchCollection(patches, alpha=0.3, color='g')
+                ax.add_collection(p)
+                ax.set_xlim(-1.05, 1.05)
+                ax.set_ylim(-1.05, 1.05)
+            if name != None:
+                namesave = name+'.pdf'
+                plt.savefig(namesave)
+            plt.show()
 
 def generate_samples(num_samp, num_point):
     '''
@@ -181,7 +181,7 @@ def generate_samples(num_samp, num_point):
 
 # plot samples from 
 helix, label = generate_samples(16, num_point)
-#plot_(helix, 2, num_point)
+plot_(helix, 2, num_point)
 
 #-----------------------------------------------------------------------------#
 # set GANs
@@ -245,13 +245,14 @@ def constraints(x, y):
     y = tf.tile(tf.square(y), [1, num_point])
     
     # (x1^2+x2^2-y^2)^2
-    delta = tf.square(x - y)
+    delta_real = tf.square(x - y)
     
-    kesi = tf.ones(tf.shape(delta))*(cons_value**2)
-    delta = delta-kesi
+    kesi = tf.ones(tf.shape(delta_real))*(cons_value**2)
+    delta = delta_real-kesi
     delta = tf.nn.relu(delta)
-    delta = tf.reduce_sum(delta,1)
-    return delta
+    delta = tf.reduce_sum(delta, 1)
+    delta_real = tf.reduce_sum(delta_real, 1)
+    return delta, delta_real
     
 def sample_Z(m, n):
     return np.random.randn(m, n)
@@ -268,7 +269,7 @@ grad = tf.gradients(discriminator(X_inter, con_v), [X_inter])[0]
 grad_norm = tf.sqrt(tf.reduce_sum((grad)**2, axis=1))
 grad_pen = lam * tf.reduce_mean((grad_norm - 1)**2)
 
-delta = constraints(G_sample, con_v)
+delta, delta_real = constraints(G_sample, con_v)
 delta_log = tf.log(delta+1)
 
 # WGAN
@@ -305,13 +306,13 @@ with tf.Session() as sess:
             con_sample = label[iter*mb_size:(iter+1)*mb_size]
             noise_sample = sample_Z(mb_size, Noise_dim)
             _, D_loss_curr = sess.run([D_solver, D_loss], feed_dict={target: output_sample, Noise: noise_sample, con_v:con_sample})
-            _, G_loss_curr, delta_curr = sess.run([G_solver, G_loss, delta], feed_dict={target: output_sample, Noise: noise_sample, con_v:con_sample})
+            _, G_loss_curr, delta_curr = sess.run([G_solver, G_loss, delta_real], feed_dict={target: output_sample, Noise: noise_sample, con_v:con_sample})
                    
         if it % (epoch/20) == 0:
             print('Iter: {}'.format(it))
             print('D loss: {:.4}'.format(D_loss_curr))
             print('G_loss: {:.4}'.format(G_loss_curr))
-            print('Constraints: {:.4}'.format(G_loss_curr))
+            print('Constraints: {:.4}'.format(np.mean(delta_curr)))
             record_epoch.append(it)
             record_loss_D.append(D_loss_curr)
             record_loss_G.append(G_loss_curr)
@@ -340,8 +341,8 @@ with tf.Session() as sess:
             record_deviation.append(deviation)
             # plot the generated data after training 
             name = 'soft_constraint_'+str(it)
-            #plot_cGANs(target_pred, n, helix_real, num_point=80, name='a')
-            #plot_cGANs_ring(target_pred, n, helix_real, con_pred)
+            plot_cGANs(target_pred, n, helix_real, num_point=num_point, name='a')
+            plot_cGANs_ring(target_pred, n, helix_real, con_pred)
     
             # plot the relationship between epoach and loss_G
 #    plt.figure()
@@ -360,6 +361,6 @@ with tf.Session() as sess:
 #    # plot the relationship between epoach and biases
 #    plt.show()
 #    plt.plot(record_epoch, record_bias)
-name = 'Cons_Value'+str(cons_value)+'-ep'+str(epoch)+'-lam'+str(lam_constraint)
+name = 'Cons_Value-GP'+str(cons_value)+'-ep'+str(epoch)+'-lam'+str(lam_constraint)
 np.savez_compressed(name, a=record_epoch, b=record_loss_G, 
                     c=record_loss_D, d=record_deviation, e = record_bias, f=target_pred)

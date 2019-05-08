@@ -11,9 +11,9 @@ Created on Tue Apr 17 14:39:00 2018
 ###----------------------------------------------------###
 import numpy as np
 import tensorflow as tf
-#import matplotlib.pyplot as plt
-#from mpl_toolkits.mplot3d import Axes3D 
-#import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D 
+import matplotlib.gridspec as gridspec
 import time
 
 # the rotation matrix for rotation
@@ -48,25 +48,25 @@ def next_batch(num, helix, label):
 
     return np.asarray(helix_shuffle), np.asarray(label_shuffle)
 
-#def plot_(data, n, num_point=150):
-#    for i in range(n-1):
-#        for j in range(i+1, n):
-#            print('figure x',i+1,'and x',j+1)
-#            #fig = plt.figure(figsize=(4, 4))
-#            gs = gridspec.GridSpec(4, 4)
-#            gs.update(wspace=0.05, hspace=0.05)
-#            for k, sample in enumerate(data):
-#                ax = plt.subplot(gs[k])
-#                plt.axis('off')
-#                ax.set_xticklabels([])
-#                ax.set_yticklabels([])
-#                ax.set_aspect('equal')
-#                a = np.reshape(sample, (n, num_point))
-#                ax.plot(a[i], a[j], 'o', markersize=1)
-#                #ax.plot(a[i], a[j],'o')
-#                #ax.set_xlim(-1.05, 1.05)
-#                #ax.set_ylim(-1.05, 1.05)
-#            plt.show()
+def plot_(data, n, num_point=150):
+    for i in range(n-1):
+        for j in range(i+1, n):
+            print('figure x',i+1,'and x',j+1)
+            #fig = plt.figure(figsize=(4, 4))
+            gs = gridspec.GridSpec(4, 4)
+            gs.update(wspace=0.05, hspace=0.05)
+            for k, sample in enumerate(data):
+                ax = plt.subplot(gs[k])
+                plt.axis('off')
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])
+                ax.set_aspect('equal')
+                a = np.reshape(sample, (n, num_point))
+                ax.plot(a[i], a[j], 'o', markersize=1)
+                #ax.plot(a[i], a[j],'o')
+                #ax.set_xlim(-1.05, 1.05)
+                #ax.set_ylim(-1.05, 1.05)
+            plt.show()
             
 def generate_samples_3D(num_samp, num_point=150):
     '''
@@ -152,7 +152,7 @@ helix, label = generate_samples_3D(16, num_point=num_point)
 # dimension of high space
 
 helix_s, M = transfer3D_to_nD(helix, n, V, theta)
-#plot_(helix_s, 4)
+plot_(helix_s, 4)
 
 #----------------------------------------------------------------#
 # Define GANs
@@ -219,14 +219,15 @@ grad_pen = lam * tf.reduce_mean((grad_norm - 1)**2)
 D_loss = -tf.reduce_mean(D_real) + tf.reduce_mean(D_fake)+grad_pen
 G_loss = -tf.reduce_mean(D_fake)
 
-D_solver = (tf.train.AdamOptimizer(learning_rate=1e-4).minimize(D_loss, var_list=theta_D))
-G_solver = (tf.train.AdamOptimizer(learning_rate=1e-4).minimize(G_loss, var_list=theta_G))
+D_solver = (tf.train.RMSPropOptimizer(learning_rate=1e-4).minimize(D_loss, var_list=theta_D))
+G_solver = (tf.train.RMSPropOptimizer(learning_rate=1e-4).minimize(G_loss, var_list=theta_G))
 
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
 epoch = 200
 num_sam = 50000
+np.random.seed(1)
 helix, label = generate_samples_3D(num_sam)
 helix_s, M = transfer3D_to_nD(helix, n, V, theta)
 print(len(helix_s))
@@ -266,9 +267,9 @@ for it in range(epoch+1):
 
 name_data =  'HighdimensionalHelix'
 np.savez_compressed(name_data, a=Generated_samples, b=D_loss_record, c=G_loss_record)
-#n_pred = 16
-#helix_real,_= next_batch(n_pred, helix=helix_s, label=label)
-#noise_pred = sample_Z(n_pred, Noise_dim)
-#target_pred = sess.run(G_sample, feed_dict={Noise: noise_pred})
-#target_pred = (target_pred+1.0)*(h_up-h_low)/2+h_low
-#plot_(target_pred, n)
+n_pred = 16
+helix_real,_= next_batch(n_pred, helix=helix_s, label=label)
+noise_pred = sample_Z(n_pred, Noise_dim)
+target_pred = sess.run(G_sample, feed_dict={Noise: noise_pred})
+target_pred = (target_pred+1.0)*(h_up-h_low)/2+h_low
+plot_(target_pred, n)
